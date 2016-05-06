@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.graphics.Bitmap;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
@@ -22,15 +23,29 @@ import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
 import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.drive.Drive;
+import com.google.android.gms.drive.DriveApi;
 import com.google.android.gms.drive.DriveApi.DriveContentsResult;
+import com.google.android.gms.drive.DriveFolder;
+import com.google.android.gms.drive.Metadata;
 import com.google.android.gms.drive.MetadataChangeSet;
+
+import android.os.Bundle;
+import android.widget.Toast;
+
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.drive.Drive;
+import com.google.android.gms.drive.DriveFolder.DriveFolderResult;
+import com.google.android.gms.drive.MetadataChangeSet;
+import com.google.android.gms.drive.query.Filters;
+import com.google.android.gms.drive.query.Query;
+import com.google.android.gms.drive.query.SearchableField;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
 public class MainActivity extends AppCompatActivity implements ConnectionCallbacks,
-        OnConnectionFailedListener{
+        OnConnectionFailedListener {
 
 
     private static final String TAG = "drive-quickstart";
@@ -97,6 +112,13 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     @Override
     public void onConnected(Bundle connectionHint) {
         Log.i(TAG, "API client connected.");
+ //       createFolder();
+/*        MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
+                .setTitle("DigitalDiary").build();
+        Drive.DriveApi.getRootFolder(getGoogleApiClient()).createFolder(
+                getGoogleApiClient(), changeSet).setResultCallback(callback);*/
+
+        new createFolder().execute();
         if (mBitmapToSave == null) {
             // This activity has no UI of its own. Just start the camera.
             startActivityForResult(new Intent(MediaStore.ACTION_IMAGE_CAPTURE),
@@ -106,7 +128,104 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         saveFileToDrive();
     }
 
-    @Override
+
+    private class createFolder extends AsyncTask<String, String, String> {
+
+        @Override
+        protected String doInBackground(String... params) {
+            Query query = new Query.Builder()
+                    .addFilter(Filters.and(Filters.eq(
+                                    SearchableField.TITLE, "DigitalDiary"),
+                            Filters.eq(SearchableField.TRASHED, false)))
+                    .build();
+            Drive.DriveApi.query(getGoogleApiClient(), query)
+                    .setResultCallback(new ResultCallback<DriveApi.MetadataBufferResult>() {
+                        @Override
+                        public void onResult(DriveApi.MetadataBufferResult result) {
+                            if (!result.getStatus().isSuccess()) {
+                                showMessage("Cannot create folder in the root.");
+                            } else {
+                                boolean isFound = false;
+                                for (Metadata m : result.getMetadataBuffer()) {
+                                    if (m.getTitle().equals("DigitalDiary")) {
+                                        showMessage("Folder exists");
+                                        isFound = true;
+                                        break;
+                                    }
+                                }
+                                if (!isFound) {
+                                    showMessage("Folder not found; creating it.");
+                                    MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
+                                            .setTitle("DigitalDiary")
+                                            .build();
+                                    Drive.DriveApi.getRootFolder(getGoogleApiClient())
+                                            .createFolder(getGoogleApiClient(), changeSet)
+                                            .setResultCallback(new ResultCallback<DriveFolder.DriveFolderResult>() {
+                                                @Override
+                                                public void onResult(DriveFolder.DriveFolderResult result) {
+                                                    if (!result.getStatus().isSuccess()) {
+                                                        showMessage("Error while trying to create the folder");
+                                                    } else {
+                                                        showMessage("Created a folder");
+                                                    }
+                                                }
+                                            });
+                                }
+                            }
+                        }
+                    });
+            return null;
+        }
+    }
+
+
+
+
+
+/*
+    protected void createFolder() {
+        Query query = new Query.Builder()
+                .addFilter(Filters.and(Filters.eq(
+                                SearchableField.TITLE, "DigitalDiary"),
+                        Filters.eq(SearchableField.TRASHED, false)))
+                .build();
+
+        DriveApi.MetadataBufferResult result = Drive.DriveApi.query(getGoogleApiClient(), query)
+                .await();
+
+        if (!result.getStatus().isSuccess()) {
+            showMessage("Cannot create folder in the root.");
+        } else {
+            boolean isFound = false;
+            for (Metadata m : result.getMetadataBuffer()) {
+                if (m.getTitle().equals("MyFolder")) {
+                    showMessage("Folder exists");
+                    isFound = true;
+                    break;
+                }
+            }
+            if (!isFound) {
+                showMessage("Folder not found; creating it.");
+                MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
+                        .setTitle("DigitalDiary")
+                        .build();
+
+                Drive.DriveApi.getRootFolder(getGoogleApiClient())
+                        .createFolder(mGoogleApiClient, changeSet).await();
+
+                if (!result.getStatus().isSuccess()) {
+                    showMessage("Error while trying to create the folder");
+                } else {
+                    showMessage("Created a folder");
+                }
+            }
+        }
+    }
+*/
+
+
+
+        @Override
     protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
         switch (requestCode) {
             case REQUEST_CODE_CAPTURE_IMAGE:
@@ -206,9 +325,25 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 });
     }
 
+    public GoogleApiClient getGoogleApiClient() {
+        return mGoogleApiClient;
+    }
+
+    final ResultCallback<DriveFolderResult> callback = new ResultCallback<DriveFolderResult>() {
+        @Override
+        public void onResult(DriveFolderResult result) {
+            if (!result.getStatus().isSuccess()) {
+                showMessage("Error while trying to create the folder");
+                return;
+            }
+            showMessage("Created a folder: " + result.getDriveFolder().getDriveId());
+        }
+    };
 
 
-
+    public void showMessage(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
 
 
 
