@@ -30,6 +30,8 @@ import com.google.android.gms.drive.Metadata;
 import com.google.android.gms.drive.MetadataChangeSet;
 
 import android.os.Bundle;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.ResultCallback;
@@ -55,11 +57,16 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
     private GoogleApiClient mGoogleApiClient;
     private Bitmap mBitmapToSave;
+    private ImageView mCapturedImageView;
+    Button b;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+//        b = (Button) findViewById(R.id.button);
+//        mCapturedImageView = (ImageView) findViewById(R.id.capturePhotoImageView);
+
     }
 
     @Override
@@ -112,19 +119,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     @Override
     public void onConnected(Bundle connectionHint) {
         Log.i(TAG, "API client connected.");
- //       createFolder();
-/*        MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
-                .setTitle("DigitalDiary").build();
-        Drive.DriveApi.getRootFolder(getGoogleApiClient()).createFolder(
-                getGoogleApiClient(), changeSet).setResultCallback(callback);*/
-
         new createFolder().execute();
-        if (mBitmapToSave == null) {
-            // This activity has no UI of its own. Just start the camera.
-            startActivityForResult(new Intent(MediaStore.ACTION_IMAGE_CAPTURE),
-                    REQUEST_CODE_CAPTURE_IMAGE);
-            return;
-        }
+        if(mBitmapToSave != null)
         saveFileToDrive();
     }
 
@@ -179,52 +175,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     }
 
 
-
-
-
-/*
-    protected void createFolder() {
-        Query query = new Query.Builder()
-                .addFilter(Filters.and(Filters.eq(
-                                SearchableField.TITLE, "DigitalDiary"),
-                        Filters.eq(SearchableField.TRASHED, false)))
-                .build();
-
-        DriveApi.MetadataBufferResult result = Drive.DriveApi.query(getGoogleApiClient(), query)
-                .await();
-
-        if (!result.getStatus().isSuccess()) {
-            showMessage("Cannot create folder in the root.");
-        } else {
-            boolean isFound = false;
-            for (Metadata m : result.getMetadataBuffer()) {
-                if (m.getTitle().equals("MyFolder")) {
-                    showMessage("Folder exists");
-                    isFound = true;
-                    break;
-                }
-            }
-            if (!isFound) {
-                showMessage("Folder not found; creating it.");
-                MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
-                        .setTitle("DigitalDiary")
-                        .build();
-
-                Drive.DriveApi.getRootFolder(getGoogleApiClient())
-                        .createFolder(mGoogleApiClient, changeSet).await();
-
-                if (!result.getStatus().isSuccess()) {
-                    showMessage("Error while trying to create the folder");
-                } else {
-                    showMessage("Created a folder");
-                }
-            }
-        }
-    }
-*/
-
-
-
         @Override
     protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
         switch (requestCode) {
@@ -233,6 +183,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 if (resultCode == Activity.RESULT_OK) {
                     // Store the image data as a bitmap for writing later.
                     mBitmapToSave = (Bitmap) data.getExtras().get("data");
+//                    mCapturedImageView.setImageBitmap(mBitmapToSave);
                 }
                 break;
             case REQUEST_CODE_CREATOR:
@@ -241,8 +192,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                     Log.i(TAG, "Image successfully saved.");
                     mBitmapToSave = null;
                     // Just start the camera again for another photo.
-                    startActivityForResult(new Intent(MediaStore.ACTION_IMAGE_CAPTURE),
-                            REQUEST_CODE_CAPTURE_IMAGE);
+                    //startActivityForResult(new Intent(MediaStore.ACTION_IMAGE_CAPTURE),REQUEST_CODE_CAPTURE_IMAGE);
                 }
                 break;
         }
@@ -254,6 +204,16 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             mGoogleApiClient.disconnect();
         }
         super.onPause();
+    }
+
+
+    public void onBtnClicked(View view){
+//        if (mBitmapToSave == null) {
+            // This activity has no UI of its own. Just start the camera.
+            startActivityForResult(new Intent(MediaStore.ACTION_IMAGE_CAPTURE),
+                    REQUEST_CODE_CAPTURE_IMAGE);
+            return;
+//        }
     }
 
     @Override
@@ -273,6 +233,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         }
         // Connect the client. Once connected, the camera is launched.
         mGoogleApiClient.connect();
+
     }
 
     /**

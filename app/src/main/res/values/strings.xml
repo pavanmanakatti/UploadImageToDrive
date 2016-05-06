@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">drive</string>
     <string name="action_settings">Settings</string>
+    <string name="Layout1Title">Camera</string>
+    <string name="title_activity_display">Display</string>
+    <string name="title_activity_ui">UIActivity</string>
 </resources>
