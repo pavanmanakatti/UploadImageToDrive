@@ -306,7 +306,4 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
-
-
-
 }
