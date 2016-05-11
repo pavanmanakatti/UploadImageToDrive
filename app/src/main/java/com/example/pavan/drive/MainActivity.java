@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 //        b = (Button) findViewById(R.id.button);
-//        mCapturedImageView = (ImageView) findViewById(R.id.capturePhotoImageView);
+        mCapturedImageView = (ImageView) findViewById(R.id.capturePhotoImageView);
 
     }
 
@@ -183,7 +183,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 if (resultCode == Activity.RESULT_OK) {
                     // Store the image data as a bitmap for writing later.
                     mBitmapToSave = (Bitmap) data.getExtras().get("data");
-//                    mCapturedImageView.setImageBitmap(mBitmapToSave);
+                    mCapturedImageView.setImageBitmap(mBitmapToSave);
                 }
                 break;
             case REQUEST_CODE_CREATOR:
