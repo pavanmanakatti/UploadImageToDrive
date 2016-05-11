@@ -3,7 +3,9 @@ package com.example.pavan.drive;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -54,10 +56,14 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     private static final int REQUEST_CODE_CAPTURE_IMAGE = 1;
     private static final int REQUEST_CODE_CREATOR = 2;
     private static final int REQUEST_CODE_RESOLUTION = 3;
-
+    private static final int PICK_FROM_GALLERY = 4;
     private GoogleApiClient mGoogleApiClient;
     private Bitmap mBitmapToSave;
-    private ImageView mCapturedImageView;
+    private ImageView mImageView;
+    private Uri imageUri;
+    boolean upload = false;
+
+
     Button b;
 
     @Override
@@ -65,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 //        b = (Button) findViewById(R.id.button);
-        mCapturedImageView = (ImageView) findViewById(R.id.capturePhotoImageView);
+        mImageView = (ImageView) findViewById(R.id.capturePhotoImageView);
 
     }
 
@@ -74,21 +80,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -119,9 +110,13 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     @Override
     public void onConnected(Bundle connectionHint) {
         Log.i(TAG, "API client connected.");
-        new createFolder().execute();
-        if(mBitmapToSave != null)
-        saveFileToDrive();
+//        new createFolder().execute();
+        if(mBitmapToSave != null) {
+            Toast.makeText(this,"Save to drive called",Toast.LENGTH_LONG).show();
+            saveFileToDrive();
+        }
+        else
+            Toast.makeText(this,"Bit map is null",Toast.LENGTH_LONG).show();
     }
 
 
@@ -177,13 +172,16 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
         @Override
     protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
+            Bitmap bitmap = null;
+            String path = "";
         switch (requestCode) {
             case REQUEST_CODE_CAPTURE_IMAGE:
                 // Called after a photo has been taken.
                 if (resultCode == Activity.RESULT_OK) {
                     // Store the image data as a bitmap for writing later.
+                    upload = true;
                     mBitmapToSave = (Bitmap) data.getExtras().get("data");
-                    mCapturedImageView.setImageBitmap(mBitmapToSave);
+                    mImageView.setImageBitmap(mBitmapToSave);
                 }
                 break;
             case REQUEST_CODE_CREATOR:
@@ -191,11 +189,33 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 if (resultCode == RESULT_OK) {
                     Log.i(TAG, "Image successfully saved.");
                     mBitmapToSave = null;
+                    upload = false;
                     // Just start the camera again for another photo.
                     //startActivityForResult(new Intent(MediaStore.ACTION_IMAGE_CAPTURE),REQUEST_CODE_CAPTURE_IMAGE);
                 }
                 break;
+            case PICK_FROM_GALLERY:
+                if (resultCode == Activity.RESULT_OK) {
+                    upload = true;
+                    imageUri = data.getData();
+                    //path = getPath(imageUri);
+                    try {
+                        mBitmapToSave = MediaStore.Images.Media.getBitmap(this.getContentResolver(),imageUri);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    //mImageView.setImageURI(imageUri);
+                }
+                break;
         }
+    }
+
+    public String getPath(Uri uri) {
+        String[] projection = {MediaStore.Images.Media.DATA};
+        Cursor cursor = managedQuery(uri, projection, null, null, null);
+        int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+        cursor.moveToFirst();
+        return cursor.getString(column_index);
     }
 
     @Override
@@ -207,7 +227,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     }
 
 
-    public void onBtnClicked(View view){
+    public void onCameraClick(View view){
 //        if (mBitmapToSave == null) {
             // This activity has no UI of its own. Just start the camera.
             startActivityForResult(new Intent(MediaStore.ACTION_IMAGE_CAPTURE),
@@ -216,9 +236,21 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 //        }
     }
 
+    public void pickFromGallery(View view) {
+        Intent intent = new Intent();
+        intent.setType("image/*");
+        intent.setAction(intent.ACTION_GET_CONTENT);
+        startActivityForResult(Intent.createChooser(intent, "Complete Action Using"), PICK_FROM_GALLERY);
+        //saveFileToDrive();
+        return;
+
+    }
+
+
     @Override
     protected void onResume() {
         super.onResume();
+        Toast.makeText(this,"onresume called",Toast.LENGTH_LONG).show();
         if (mGoogleApiClient == null) {
             // Create the API client and bind it to an instance variable.
             // We use this instance as the callback for connection and connection
@@ -305,5 +337,4 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     public void showMessage(String message) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
-
 }
